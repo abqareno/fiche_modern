@@ -13,3 +13,4 @@ code/
 
 # environment configuration
 .env
+.env.example
