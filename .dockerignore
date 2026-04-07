@@ -10,3 +10,6 @@ code/
 # editor artefacts
 *.swp
 .DS_Store
+
+# environment configuration
+.env

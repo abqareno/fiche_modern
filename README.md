@@ -377,34 +377,32 @@ docker compose up -d
 
 Paste data is stored in the `fiche_data` named Docker volume and survives container restarts or re-creation.
 
-### Customising the domain
+### Configuration via `.env`
 
-Override the default command to pass your public domain name:
+All deployment parameters are controlled by the `.env` file in the project root. The file ships with sensible defaults:
 
-```yaml
-# docker-compose.yml
-services:
-  fiche:
-    command: ["-o", "/data", "-d", "yourdomain.com"]
-```
+| Variable | Default | Description |
+|---|---|---|
+| `FICHE_PORT` | `9999` | Host port for the fiche TCP server |
+| `LINES_PORT` | `5000` | Host port for the Lines web UI |
+| `FICHE_DOMAIN` | `localhost` | Domain advertised in paste URLs |
+| `DATA_VOLUME` | `fiche_data` | Named Docker volume **or** absolute host path for a bind mount |
 
-Or with plain Docker:
+Edit `.env` to customise before starting:
 
 ```bash
-docker build -t fiche .
-docker run -d \
-  -p 9999:9999 \
-  -v fiche_data:/data \
-  fiche -o /data -d yourdomain.com
+# .env
+FICHE_PORT=9999
+LINES_PORT=5000
+FICHE_DOMAIN=yourdomain.com
+DATA_VOLUME=fiche_data          # named volume (default)
+# DATA_VOLUME=/host/path/pastes # bind-mount alternative
 ```
 
-### Bind-mount instead of a named volume
+Then start:
 
-To store pastes directly on the host filesystem replace the volume reference in `docker-compose.yml`:
-
-```yaml
-volumes:
-  - /host/path/to/pastes:/data
+```bash
+docker compose up -d
 ```
 
 ### Accessing pastes
@@ -416,6 +414,16 @@ cat file.txt | nc localhost 9999
 ```
 
 Open the returned URL in a browser, or browse all pastes through the Lines web UI at `http://localhost:5000`.
+
+### Running with plain Docker
+
+```bash
+docker build -t fiche .
+docker run -d \
+  -p 9999:9999 \
+  -v fiche_data:/data \
+  fiche -o /data -d yourdomain.com
+```
 
 -------------------------------------------------------------------------------
 

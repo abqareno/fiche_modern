@@ -2,11 +2,10 @@ services:
   fiche:
     build: .
     ports:
-      - "9999:9999"
+      - "${FICHE_PORT:-9999}:9999"
     volumes:
-      - fiche_data:/data
-    # To set your domain, override the command, e.g.:
-    #   command: ["-o", "/data", "-d", "yourdomain.com"]
+      - ${DATA_VOLUME:-fiche_data}:/data
+    command: ["-o", "/data", "-d", "${FICHE_DOMAIN:-localhost}"]
     restart: unless-stopped
 
   lines:
@@ -14,9 +13,9 @@ services:
     working_dir: /app
     volumes:
       - ./extras/lines:/app
-      - fiche_data:/data
+      - ${DATA_VOLUME:-fiche_data}:/data
     ports:
-      - "5000:5000"
+      - "${LINES_PORT:-5000}:5000"
     command: >
       sh -c "pip install --quiet -r requirements.txt &&
              python lines.py /data"
