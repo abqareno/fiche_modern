@@ -33,6 +33,10 @@ You can use our beautification service to get any paste colored and numbered. Ju
 http://l.termbin.com/ydxh
 ```
 
+### Browser-based usage
+
+You can also create and view pastes entirely from a web browser using the bundled `extras/lines` web app (see [Web Interface](#web-interface) below).
+
 -------------------------------------------------------------------------------
 
 ## Useful aliases
@@ -330,6 +334,31 @@ server {
     }
 }
 ```
+
+-------------------------------------------------------------------------------
+
+## Web Interface
+
+The `extras/lines` directory contains a Flask-based web application (`lines.py`) that turns fiche into a **fully browser-usable pastebin**.  It provides:
+
+* **A paste-submission form** at `/` — type or paste text, click *Submit*, and receive a shareable URL.
+* **Syntax-highlighted paste viewing** at `/<slug>` — any paste (whether submitted through the web form or via `nc`) is displayed with line numbers and automatic language detection, powered by [Pygments](https://pygments.org/).
+
+### Requirements
+
+```
+pip install flask pygments
+```
+
+### Running
+
+```
+python extras/lines/lines.py /path/to/output/directory
+```
+
+Then open `http://localhost:5000` in your browser.
+
+> **Note:** The paste *storage* directory must be the same directory used by the fiche TCP server (`-o` flag) if you want both interfaces to share pastes.
 
 ## License
 
