@@ -1,0 +1,12 @@
+# compiled binary
+fiche
+
+# default paste output directory
+code/
+
+# log files
+*.log
+
+# editor artefacts
+*.swp
+.DS_Store

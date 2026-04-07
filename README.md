@@ -360,6 +360,65 @@ Then open `http://localhost:5000` in your browser.
 
 > **Note:** The paste *storage* directory must be the same directory used by the fiche TCP server (`-o` flag) if you want both interfaces to share pastes.
 
+-------------------------------------------------------------------------------
+
+## Docker
+
+A `Dockerfile` and `docker-compose.yml` are provided so you can run fiche (and the optional web interface) in containers with data persisted across restarts.
+
+### Quick start with Docker Compose
+
+```bash
+# Start both the fiche TCP server (port 9999) and the Lines web UI (port 5000)
+docker compose up -d
+```
+
+> **Note:** `docker compose` (without a hyphen) requires Docker Engine 20.10+ with the Compose V2 plugin. On older installations use `docker-compose` (with a hyphen) instead.
+
+Paste data is stored in the `fiche_data` named Docker volume and survives container restarts or re-creation.
+
+### Customising the domain
+
+Override the default command to pass your public domain name:
+
+```yaml
+# docker-compose.yml
+services:
+  fiche:
+    command: ["-o", "/data", "-d", "yourdomain.com"]
+```
+
+Or with plain Docker:
+
+```bash
+docker build -t fiche .
+docker run -d \
+  -p 9999:9999 \
+  -v fiche_data:/data \
+  fiche -o /data -d yourdomain.com
+```
+
+### Bind-mount instead of a named volume
+
+To store pastes directly on the host filesystem replace the volume reference in `docker-compose.yml`:
+
+```yaml
+volumes:
+  - /host/path/to/pastes:/data
+```
+
+### Accessing pastes
+
+After starting, send text with netcat:
+
+```bash
+cat file.txt | nc localhost 9999
+```
+
+Open the returned URL in a browser, or browse all pastes through the Lines web UI at `http://localhost:5000`.
+
+-------------------------------------------------------------------------------
+
 ## License
 
 Fiche is MIT licensed.
