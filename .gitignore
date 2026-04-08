@@ -6,3 +6,6 @@ code/
 
 # ignore log files
 *.log
+
+# local environment configuration (use .env.example as a template)
+.env

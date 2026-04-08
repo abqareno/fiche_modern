@@ -360,6 +360,79 @@ Then open `http://localhost:5000` in your browser.
 
 > **Note:** The paste *storage* directory must be the same directory used by the fiche TCP server (`-o` flag) if you want both interfaces to share pastes.
 
+-------------------------------------------------------------------------------
+
+## Docker
+
+A `Dockerfile` and `docker-compose.yml` are provided so you can run fiche (and the optional web interface) in containers with data persisted across restarts.
+
+### Quick start with Docker Compose
+
+```bash
+# Start both the fiche TCP server (port 9999) and the Lines web UI (port 5000)
+docker compose up -d
+```
+
+> **Note:** `docker compose` (without a hyphen) requires Docker Engine 20.10+ with the Compose V2 plugin. On older installations use `docker-compose` (with a hyphen) instead.
+
+Paste data is stored in the `fiche_data` named Docker volume and survives container restarts or re-creation.
+
+### Configuration via `.env`
+
+All deployment parameters are controlled by the `.env` file in the project root. Copy the provided template before starting:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` to customise as needed. The available variables and their defaults are:
+
+| Variable | Default | Description |
+|---|---|---|
+| `FICHE_PORT` | `9999` | Host port for the fiche TCP server |
+| `LINES_PORT` | `5000` | Host port for the Lines web UI |
+| `FICHE_DOMAIN` | `localhost` | Domain advertised in paste URLs |
+| `DATA_VOLUME` | `fiche_data` | Named Docker volume **or** absolute host path for a bind mount |
+
+Edit `.env` to customise before starting:
+
+```bash
+# .env
+FICHE_PORT=9999
+LINES_PORT=5000
+FICHE_DOMAIN=yourdomain.com
+DATA_VOLUME=fiche_data          # named volume (default)
+# DATA_VOLUME=/host/path/pastes # bind-mount alternative
+```
+
+Then start:
+
+```bash
+docker compose up -d
+```
+
+### Accessing pastes
+
+After starting, send text with netcat:
+
+```bash
+cat file.txt | nc localhost 9999
+```
+
+Open the returned URL in a browser, or browse all pastes through the Lines web UI at `http://localhost:5000`.
+
+### Running with plain Docker
+
+```bash
+docker build -t fiche .
+docker run -d \
+  -p 9999:9999 \
+  -v fiche_data:/data \
+  fiche -o /data -d yourdomain.com
+```
+
+-------------------------------------------------------------------------------
+
 ## License
 
 Fiche is MIT licensed.

@@ -1,0 +1,23 @@
+services:
+  fiche:
+    build: .
+    ports:
+      - "${FICHE_PORT:-9999}:9999"
+    volumes:
+      - ${DATA_VOLUME:-fiche_data}:/data
+    command: ["-o", "/data", "-d", "${FICHE_DOMAIN:-localhost}"]
+    restart: unless-stopped
+
+  lines:
+    build: ./extras/lines
+    volumes:
+      - ${DATA_VOLUME:-fiche_data}:/data
+    ports:
+      - "${LINES_PORT:-5000}:5000"
+    command: ["python", "lines.py", "/data"]
+    depends_on:
+      - fiche
+    restart: unless-stopped
+
+volumes:
+  fiche_data:
