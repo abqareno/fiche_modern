@@ -379,7 +379,13 @@ Paste data is stored in the `fiche_data` named Docker volume and survives contai
 
 ### Configuration via `.env`
 
-All deployment parameters are controlled by the `.env` file in the project root. The file ships with sensible defaults:
+All deployment parameters are controlled by the `.env` file in the project root. Copy the provided template before starting:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` to customise as needed. The available variables and their defaults are:
 
 | Variable | Default | Description |
 |---|---|---|

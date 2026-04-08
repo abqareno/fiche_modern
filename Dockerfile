@@ -13,11 +13,17 @@ RUN make
 # ---- Runtime stage ----
 FROM ubuntu:24.04
 
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin fiche && \
+    mkdir -p /data && \
+    chown fiche:fiche /data
+
 COPY --from=builder /build/fiche /usr/local/bin/fiche
 
 # /data is the directory where pastes are stored.
 # Mount a host directory or a named volume here for persistence.
 VOLUME /data
+
+USER fiche
 
 EXPOSE 9999
 
