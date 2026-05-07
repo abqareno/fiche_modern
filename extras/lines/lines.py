@@ -73,8 +73,8 @@ def allowed_file(filename):
     if '.' not in filename:
         return False
     parts = filename.split('.')
-    base, ext = parts[0], parts[-1].lower()
-    if not base:
+    first_part, ext = parts[0], parts[-1].lower()
+    if not first_part:
         return False
     # Reject if any component of the filename is a dangerous extension
     if any(p.lower() in DANGEROUS_EXTENSIONS for p in parts[1:]):
