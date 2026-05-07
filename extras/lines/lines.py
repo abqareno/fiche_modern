@@ -1,6 +1,7 @@
 import argparse
 import os
 import random
+import re
 import string
 
 import pygments
@@ -22,6 +23,11 @@ MAX_SLUG_GENERATION_ATTEMPTS = 256
 MAX_CONTENT_BYTES = 1024 * 1024       # 1 MB for text pastes
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024    # 5 MB for file uploads
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'pdf'}
+# Extensions that should never appear anywhere in an uploaded filename
+DANGEROUS_EXTENSIONS = {
+    'php', 'php3', 'php4', 'php5', 'phtml', 'asp', 'aspx', 'jsp',
+    'cgi', 'pl', 'py', 'rb', 'sh', 'bash', 'exe', 'bat', 'cmd', 'ps1',
+}
 
 app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_BYTES
 
@@ -64,7 +70,16 @@ UPLOAD_FORM = """<!DOCTYPE html>
 
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    if '.' not in filename:
+        return False
+    parts = filename.split('.')
+    base, ext = parts[0], parts[-1].lower()
+    if not base:
+        return False
+    # Reject if any component of the filename is a dangerous extension
+    if any(p.lower() in DANGEROUS_EXTENSIONS for p in parts[1:]):
+        return False
+    return ext in ALLOWED_EXTENSIONS
 
 
 def generate_slug():
@@ -122,13 +137,8 @@ def upload():
     if not allowed_file(file.filename):
         return 'File type not allowed.', 400
 
-    # Read the file data once to check size without relying solely on Content-Length
-    data = file.read(MAX_UPLOAD_BYTES + 1)
-    if len(data) > MAX_UPLOAD_BYTES:
-        return 'File exceeds maximum allowed size (5 MB).', 413
-
     filename = secure_filename(file.filename)
-    if not filename:
+    if not filename or not allowed_file(filename):
         return 'Invalid filename.', 400
 
     root = os.path.abspath(args.root_dir)
@@ -142,8 +152,7 @@ def upload():
     os.makedirs(paste_dir)
 
     file_path = os.path.join(paste_dir, filename)
-    with open(file_path, 'wb') as f:
-        f.write(data)
+    file.save(file_path)
 
     meta_path = os.path.join(paste_dir, 'meta.txt')
     with open(meta_path, 'w') as f:
@@ -154,8 +163,8 @@ def upload():
 
 @app.route('/<slug>')
 def view_paste(slug):
-    # Return 404 in case of urls longer than 64 chars
-    if len(slug) > 64:
+    # Validate slug to only contain safe generated characters
+    if not re.fullmatch(r'[a-z0-9]{1,64}', slug):
         abort(404)
 
     root = os.path.abspath(args.root_dir)
@@ -192,9 +201,11 @@ def view_paste(slug):
                 if line.startswith('original_filename='):
                     filename = line.split('=', 1)[1].strip()
                     break
+        # filename was already sanitized with secure_filename at upload time;
+        # re-validate defensively in case meta.txt is tampered with
         if filename:
             safe = secure_filename(filename)
-            if safe and os.path.isfile(os.path.join(target_dir, safe)):
+            if safe and allowed_file(safe) and os.path.isfile(os.path.join(target_dir, safe)):
                 return send_from_directory(target_dir, safe)
 
     # Not found
