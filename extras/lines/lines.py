@@ -206,7 +206,11 @@ def view_paste(slug):
         if filename:
             safe = secure_filename(filename)
             if safe and allowed_file(safe) and os.path.isfile(os.path.join(target_dir, safe)):
-                return send_from_directory(target_dir, safe)
+                response = send_from_directory(
+                    target_dir, safe, as_attachment=True
+                )
+                response.headers['X-Content-Type-Options'] = 'nosniff'
+                return response
 
     # Not found
     abort(404)
