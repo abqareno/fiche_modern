@@ -3,7 +3,9 @@ name: Build and Push Docker image to ghcr.io
 on:
   push:
     branches:
-      - main
+      - master
+    tags:
+      - '*'
 
 jobs:
   build-and-push:
@@ -14,27 +16,101 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       with:
         persist-credentials: false
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+    - name: Build fiche image
+      run: docker build --tag fiche:ci .
+
+    - name: Prepare .env
+      run: cp .env.example .env
+
+    - name: Start services
+      run: docker compose up -d --build
+
+    - name: Wait for fiche (TCP 9999)
+      run: |
+        echo "Waiting for fiche to accept connections on port 9999..."
+        for i in $(seq 1 30); do
+          if nc -z localhost 9999 2>/dev/null; then
+            echo "fiche is up after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "ERROR: fiche did not become ready in 30 seconds" >&2
+        exit 1
+
+    - name: Wait for lines (HTTP 5000)
+      run: |
+        echo "Waiting for lines to respond on port 5000..."
+        for i in $(seq 1 60); do
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/ || true)
+          if [ "$status" = "200" ]; then
+            echo "lines returned HTTP 200 after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "ERROR: lines did not return HTTP 200 in 60 seconds (last status: $status)" >&2
+        exit 1
+
+    - name: Smoke test paste submission
+      run: |
+        response=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X POST http://localhost:5000/submit \
+          --data-urlencode "content=hello from CI")
+        if [ "$response" = "200" ] || [ "$response" = "302" ]; then
+          echo "Paste submission returned HTTP $response – OK"
+        else
+          echo "ERROR: unexpected HTTP status $response from /submit" >&2
+          exit 1
+        fi
+
+    - name: Compute image tags
+      id: image-tags
+      run: |
+        image="ghcr.io/${{ github.repository }}"
+        sha_tag="${image}:${GITHUB_SHA}"
+        if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+          {
+            echo "tags<<EOF"
+            echo "${sha_tag}"
+            echo "${image}:${GITHUB_REF_NAME}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "tags<<EOF"
+            echo "${sha_tag}"
+            echo "${image}:latest"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Log in to ghcr.io
-      uses: docker/login-action@v3
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
       with:
         context: .
         file: Dockerfile
         push: true
-        tags: |
-          ghcr.io/${{ github.repository }}:v1.5
-          ghcr.io/${{ github.repository }}:${{ github.sha }}
-          ghcr.io/${{ github.repository }}:latest
+        tags: ${{ steps.image-tags.outputs.tags }}
+
+    - name: Dump container logs
+      if: always()
+      run: docker compose logs --no-color
+
+    - name: Tear down
+      if: always()
+      run: docker compose down --volumes
