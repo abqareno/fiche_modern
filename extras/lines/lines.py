@@ -100,6 +100,9 @@ def main():
 
 @app.route('/submit', methods=['POST'])
 def submit():
+    if request.content_length and request.content_length > MAX_CONTENT_BYTES:
+        return 'Content exceeds maximum allowed size (1 MB).', 413
+
     content = request.form.get('content', '')
     if not content.strip():
         return 'No content provided.', 400
